@@ -1,0 +1,43 @@
+services:
+  dind:
+    image: docker:dind
+    container_name: dind
+    privileged: true
+    networks:
+      # Add a network alias for the Docker daemon
+      jenkins:
+        aliases:
+          - docker
+
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - docker-certs-ca:/certs/ca
+      - docker-certs-client:/certs/client
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    user: root
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: 1
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - docker-certs-client:/certs/client:ro # attach docker-certs-client volume (read-only)
+      - jenkins-data:/var/jenkins_home # attach jenkins-data volume
+      - /usr/bin/docker:/usr/bin/docker # ?
+    networks:
+      - jenkins
+
+volumes:
+  docker-certs-ca:
+  docker-certs-client:
+  jenkins-data:
+
+networks:
+  jenkins:
+    driver: bridge
+    # external: true
