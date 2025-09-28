@@ -1,0 +1,58 @@
+jenkins:
+  # Authorization: Disable all anonymous access
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        # Admin user permissions
+        - "Overall/Administer:admin"
+        - "Overall/Read:admin"
+        # Authenticated users permissions (non-admin)
+        - "Overall/Read:authenticated"
+        - "Job/Build:authenticated"
+        - "Job/Cancel:authenticated"
+        - "Job/Read:authenticated"
+        - "Job/Workspace:authenticated"
+        - "View/Read:authenticated"
+        # Explicitly NO permissions for anonymous users
+        # Anonymous users will be redirected to login
+
+  # Security Realm: Local user database
+  securityRealm:
+    local:
+      allowsSignup: false  # Prevent self-registration
+      enableCaptcha: false
+      users:
+        - id: "${JENKINS_ADMIN_ID:-admin}"
+          password: "${JENKINS_ADMIN_PASSWORD:-admin}"  # Set via environment variable
+          properties:
+            - mailer:
+                emailAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+
+  # Additional security settings
+  remotingSecurity:
+    enabled: true
+
+  # CSRF Protection
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+
+  # Disable CLI over remoting
+  CLI:
+    enabled: false
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+    adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+
+security:
+  # Disable script security for Job DSL (optional, enable if using Job DSL)
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: true
+
+  # API Token settings
+  apiToken:
+    creationOfLegacyTokenEnabled: false
+    tokenGenerationOnCreationEnabled: false
+    usageStatisticsEnabled: true

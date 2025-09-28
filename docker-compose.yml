@@ -25,6 +25,10 @@ services: # Define the services/containers for this application
       DOCKER_TLS_VERIFY: 1 # Enable TLS verification for Docker connections
       DOCKER_CERT_PATH: /certs/client # Path to Docker TLS certificates
       CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml # Path to JCasC configuration
+      # Jenkins admin credentials from .env file
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:-admin}
+      JENKINS_ADMIN_EMAIL: ${JENKINS_ADMIN_EMAIL:-admin@example.com}
     volumes: # Mount volumes for Jenkins data and Docker integration
       - docker-certs-client:/certs/client:ro # Mount Docker client certificates (read-only)
       - jenkins-data:/var/jenkins_home # Persistent storage for Jenkins configuration and data
