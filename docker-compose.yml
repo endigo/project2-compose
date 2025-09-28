@@ -1,43 +1,43 @@
-services:
-  dind:
-    image: docker:dind
-    container_name: dind
-    privileged: true
-    networks:
+services: # Define the services/containers for this application
+  dind: # Docker-in-Docker service that provides Docker daemon functionality
+    image: docker:dind # Official Docker-in-Docker image
+    container_name: dind # Set explicit container name instead of auto-generated
+    privileged: true # Required for DinD to run Docker daemon inside container
+    networks: # Network configuration for this service
       # Add a network alias for the Docker daemon
-      jenkins:
-        aliases:
-          - docker
+      jenkins: # Connect to jenkins network
+        aliases: # Network aliases for this container
+          - docker # Allow Jenkins to reach this container via 'docker' hostname
+    environment: # Environment variables for the container
+      DOCKER_TLS_CERTDIR: /certs # Enable TLS and specify certificate directory
+    volumes: # Mount volumes for persistent data and certificate sharing
+      - docker-certs-ca:/certs/ca # Mount CA certificates volume
+      - docker-certs-client:/certs/client # Mount client certificates volume
 
-    environment:
-      DOCKER_TLS_CERTDIR: /certs
-    volumes:
-      - docker-certs-ca:/certs/ca
-      - docker-certs-client:/certs/client
+  jenkins: # Jenkins CI/CD server service
+    image: jenkins/jenkins:lts # Official Jenkins LTS (Long Term Support) image
+    ports: # Port mappings from host to container
+      - "8080:8080" # Jenkins web UI port (host:container)
+      - "50000:50000" # Jenkins agent communication port for distributed builds
+    user: root # Run Jenkins as root user (required for Docker access)
+    environment: # Configure Docker client in Jenkins
+      DOCKER_HOST: tcp://docker:2376 # Connect to Docker daemon via TLS on port 2376
+      DOCKER_TLS_VERIFY: 1 # Enable TLS verification for Docker connections
+      DOCKER_CERT_PATH: /certs/client # Path to Docker TLS certificates
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml # Path to JCasC configuration
+    volumes: # Mount volumes for Jenkins data and Docker integration
+      - docker-certs-client:/certs/client:ro # Mount Docker client certificates (read-only)
+      - jenkins-data:/var/jenkins_home # Persistent storage for Jenkins configuration and data
+      - /usr/bin/docker:/usr/bin/docker # Mount Docker CLI from host (may not work on all systems)
+      - ./jenkins-casc.yaml:/var/jenkins_home/casc.yaml:ro # Mount JCasC configuration
+    networks: # Network configuration
+      - jenkins # Connect to jenkins network
 
-  jenkins:
-    image: jenkins/jenkins:lts
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    user: root
-    environment:
-      DOCKER_HOST: tcp://docker:2376
-      DOCKER_TLS_VERIFY: 1
-      DOCKER_CERT_PATH: /certs/client
-    volumes:
-      - docker-certs-client:/certs/client:ro # attach docker-certs-client volume (read-only)
-      - jenkins-data:/var/jenkins_home # attach jenkins-data volume
-      - /usr/bin/docker:/usr/bin/docker # ?
-    networks:
-      - jenkins
+volumes: # Define named volumes for data persistence
+  docker-certs-ca: # Volume for Docker CA certificates
+  docker-certs-client: # Volume for Docker client certificates
+  jenkins-data: # Volume for Jenkins home directory data
 
-volumes:
-  docker-certs-ca:
-  docker-certs-client:
-  jenkins-data:
-
-networks:
-  jenkins:
-    driver: bridge
-    # external: true
+networks: # Define custom networks
+  jenkins: # Custom network for Jenkins and Docker communication
+    driver: bridge # Use bridge network driver for container-to-container communication
