@@ -1,0 +1,82 @@
+FROM jenkins/jenkins:lts
+
+# Skip initial setup wizard
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
+
+# Install all suggested plugins and additional ones for complete CI/CD setup
+RUN jenkins-plugin-cli --plugins \
+    # Configuration and Security
+    configuration-as-code:latest \
+    matrix-auth:latest \
+    ldap:latest \
+    antisamy-markup-formatter:latest \
+    \
+    # Build Features
+    cloudbees-folder:latest \
+    build-timeout:latest \
+    timestamper:latest \
+    ws-cleanup:latest \
+    ant:latest \
+    gradle:latest \
+    \
+    # Credentials and Authentication
+    credentials:latest \
+    credentials-binding:latest \
+    ssh-credentials:latest \
+    plain-credentials:latest \
+    \
+    # Git and SCM
+    git:latest \
+    github:latest \
+    github-branch-source:latest \
+    git-client:latest \
+    git-server:latest \
+    scm-api:latest \
+    \
+    # Pipeline and Workflow
+    workflow-aggregator:latest \
+    pipeline-stage-view:latest \
+    pipeline-graph-view:latest \
+    pipeline-github-lib:latest \
+    pipeline-stage-step:latest \
+    pipeline-build-step:latest \
+    pipeline-model-definition:latest \
+    pipeline-milestone-step:latest \
+    pipeline-input-step:latest \
+    \
+    # Docker Integration
+    docker-workflow:latest \
+    docker-plugin:latest \
+    \
+    # Distributed Builds
+    ssh-slaves:latest \
+    ssh-agent:latest \
+    \
+    # Notifications
+    email-ext:latest \
+    mailer:latest \
+    \
+    # UI and Visualization
+    blueocean:latest \
+    dark-theme:latest \
+    \
+    # Additional Core Utilities
+    resource-disposer:latest \
+    pipeline-utility-steps:latest \
+    job-dsl:latest \
+    ansicolor:latest \
+    command-launcher:latest \
+    jdk-tool:latest \
+    bouncycastle-api:latest \
+    jackson2-api:latest \
+    echarts-api:latest \
+    bootstrap5-api:latest \
+    font-awesome-api:latest \
+    jquery3-api:latest \
+    popper2-api:latest
+
+# Set Jenkins home
+ENV JENKINS_HOME /var/jenkins_home
+
+# Expose Jenkins ports
+EXPOSE 8080 50000

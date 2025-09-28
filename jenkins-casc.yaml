@@ -3,15 +3,33 @@ jenkins:
   authorizationStrategy:
     globalMatrix:
       permissions:
-        # Admin user permissions
-        - "Overall/Administer:admin"
-        - "Overall/Read:admin"
-        # Authenticated users permissions (non-admin)
+        # Admin user permissions - full control
+        - "Overall/Administer:${JENKINS_ADMIN_ID:-admin}"
+        - "Overall/Read:${JENKINS_ADMIN_ID:-admin}"
+
+        # Pipeline service account permissions - limited to job execution
+        - "Overall/Read:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Build:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Cancel:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Configure:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Create:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Delete:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Discover:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Move:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Read:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Job/Workspace:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Run/Delete:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Run/Replay:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "Run/Update:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "View/Configure:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "View/Create:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "View/Delete:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "View/Read:${JENKINS_PIPELINE_ID:-pipeline}"
+        - "SCM/Tag:${JENKINS_PIPELINE_ID:-pipeline}"
+
+        # General authenticated users permissions - read-only
         - "Overall/Read:authenticated"
-        - "Job/Build:authenticated"
-        - "Job/Cancel:authenticated"
         - "Job/Read:authenticated"
-        - "Job/Workspace:authenticated"
         - "View/Read:authenticated"
         # Explicitly NO permissions for anonymous users
         # Anonymous users will be redirected to login
@@ -19,14 +37,19 @@ jenkins:
   # Security Realm: Local user database
   securityRealm:
     local:
-      allowsSignup: false  # Prevent self-registration
+      allowsSignup: false # Prevent self-registration
       enableCaptcha: false
       users:
         - id: "${JENKINS_ADMIN_ID:-admin}"
-          password: "${JENKINS_ADMIN_PASSWORD:-admin}"  # Set via environment variable
+          password: "${JENKINS_ADMIN_PASSWORD:-admin}" # Set via environment variable
           properties:
             - mailer:
                 emailAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+        - id: "${JENKINS_PIPELINE_ID:-pipeline}"
+          password: "${JENKINS_PIPELINE_PASSWORD:-pipeline123}" # Service account for pipeline execution
+          properties:
+            - mailer:
+                emailAddress: "${JENKINS_PIPELINE_EMAIL:-pipeline@example.com}"
 
   # Additional security settings
   remotingSecurity:
@@ -37,9 +60,8 @@ jenkins:
     standard:
       excludeClientIPFromCrumb: false
 
-  # Disable CLI over remoting
-  CLI:
-    enabled: false
+  # Disable agent to master access control - replaces CLI setting
+  slaveAgentPort: 50000
 
 unclassified:
   location:
@@ -47,10 +69,6 @@ unclassified:
     adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
 
 security:
-  # Disable script security for Job DSL (optional, enable if using Job DSL)
-  globalJobDslSecurityConfiguration:
-    useScriptSecurity: true
-
   # API Token settings
   apiToken:
     creationOfLegacyTokenEnabled: false
