@@ -74,3 +74,49 @@ security:
     creationOfLegacyTokenEnabled: false
     tokenGenerationOnCreationEnabled: false
     usageStatisticsEnabled: true
+
+jobs:
+  - script: >
+      pipelineJob('21979741_Project2_pipeline') {
+        description('Pipeline for AWS Elastic Beanstalk Express.js Sample Application')
+
+        // Keep only recent builds
+        logRotator {
+          numToKeep(10)
+          artifactNumToKeep(5)
+        }
+
+        // Pipeline definition from repository's Jenkinsfile
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/endigo/aws-elastic-beanstalk-express-js-sample.git')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')  // Use the existing Jenkinsfile from the repo
+            lightweight(true)
+          }
+        }
+      }
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Snyk API token for security scanning
+          - string:
+              scope: GLOBAL
+              id: "snyk-api-token"
+              secret: "${SNYK_API_TOKEN:-dummy-token}"
+              description: "Snyk API token for security scanning"
+          # Docker Hub credentials
+          - usernamePassword:
+              scope: GLOBAL
+              id: "docker-hub-credentials"
+              username: "${DOCKER_HUB_USERNAME:-dummy}"
+              password: "${DOCKER_HUB_PASSWORD:-dummy}"
+              description: "Docker Hub credentials"

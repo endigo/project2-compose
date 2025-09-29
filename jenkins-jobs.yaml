@@ -1,0 +1,45 @@
+jobs:
+  - script: >
+      pipelineJob('21979741_Project2_pipeline') {
+        description('Pipeline for AWS Elastic Beanstalk Express.js Sample Application')
+
+        // Configure build discarder to keep only recent builds
+        logRotator {
+          numToKeep(10)
+          artifactNumToKeep(5)
+        }
+
+        // Set up pipeline triggers
+        triggers {
+          pollSCM('H/5 * * * *')  // Poll every 5 minutes
+        }
+
+        // Define pipeline from SCM
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/endigo/aws-elastic-beanstalk-express-js-sample.git')
+                  credentials('github-credentials')  // Configure credentials in Jenkins
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(true)
+          }
+        }
+
+        // Configure build parameters
+        parameters {
+          stringParam('BRANCH', 'main', 'Branch to build')
+          booleanParam('DEPLOY_TO_STAGING', false, 'Deploy to staging after successful build')
+          choiceParam('ENVIRONMENT', ['development', 'staging', 'production'], 'Target environment')
+        }
+
+        // Set concurrent builds
+        properties {
+          disableConcurrentBuilds()
+        }
+      }
