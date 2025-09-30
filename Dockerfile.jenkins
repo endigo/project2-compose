@@ -1,38 +1,12 @@
 FROM jenkins/jenkins:lts
 
-# Switch to root to install Docker CLI
 USER root
 
-# Install Docker CLI and required dependencies
-RUN apt-get update && \
-    apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release && \
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-    apt-get update && \
-    apt-get install -y docker-ce-cli && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
-# Add jenkins user to docker group
-# Note: The GID 999 might need to be adjusted to match your host's docker group
-# Check with: getent group docker
-RUN groupadd -g 999 docker 2>/dev/null || groupmod -g 999 docker && \
-    usermod -aG docker jenkins
+# Create basic directories (permissions handled by startup script)
+RUN mkdir -p /var/jenkins_home/workspace
 
-# Fix permissions for Jenkins home
-RUN chown -R jenkins:jenkins /var/jenkins_home
-
-# Keep running as root for Docker access
-# Running as root ensures Docker socket access regardless of host configuration
-# USER jenkins - commented out to run as root
-
-# Skip initial setup wizard
-ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false
+ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true -Djava.awt.headless=true
 
 # Install all suggested plugins and additional ones for complete CI/CD setup
 RUN jenkins-plugin-cli --plugins \
@@ -78,6 +52,9 @@ RUN jenkins-plugin-cli --plugins \
     # Docker Integration
     docker-workflow:latest \
     docker-plugin:latest \
+    \
+    # Durable Task Plugin
+    durable-task:latest \
     \
     # Distributed Builds
     ssh-slaves:latest \
