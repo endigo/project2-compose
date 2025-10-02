@@ -2,89 +2,19 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-
-# Create basic directories (permissions handled by startup script)
-RUN mkdir -p /var/jenkins_home/workspace
-
-ENV JAVA_OPTS -Djenkins.install.runSetupWizard=false -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true -Djava.awt.headless=true
-
 # Install all suggested plugins and additional ones for complete CI/CD setup
-RUN jenkins-plugin-cli --plugins \
-    # Configuration and Security
-    configuration-as-code:latest \
-    matrix-auth:latest \
-    ldap:latest \
-    antisamy-markup-formatter:latest \
-    \
-    # Build Features
-    cloudbees-folder:latest \
-    build-timeout:latest \
-    timestamper:latest \
-    ws-cleanup:latest \
-    ant:latest \
-    gradle:latest \
-    \
-    # Credentials and Authentication
-    credentials:latest \
-    credentials-binding:latest \
-    ssh-credentials:latest \
-    plain-credentials:latest \
-    \
-    # Git and SCM
-    git:latest \
-    github:latest \
-    github-branch-source:latest \
-    git-client:latest \
-    git-server:latest \
-    scm-api:latest \
-    \
-    # Pipeline and Workflow
-    workflow-aggregator:latest \
-    pipeline-stage-view:latest \
-    pipeline-graph-view:latest \
-    pipeline-github-lib:latest \
-    pipeline-stage-step:latest \
-    pipeline-build-step:latest \
-    pipeline-model-definition:latest \
-    pipeline-milestone-step:latest \
-    pipeline-input-step:latest \
-    \
-    # Docker Integration
-    docker-workflow:latest \
-    docker-plugin:latest \
-    \
-    # Durable Task Plugin
-    durable-task:latest \
-    \
-    # Distributed Builds
-    ssh-slaves:latest \
-    ssh-agent:latest \
-    \
-    # Notifications
-    email-ext:latest \
-    mailer:latest \
-    \
-    # UI and Visualization
-    blueocean:latest \
-    dark-theme:latest \
-    \
-    # Additional Core Utilities
-    resource-disposer:latest \
-    pipeline-utility-steps:latest \
-    job-dsl:latest \
-    ansicolor:latest \
-    command-launcher:latest \
-    jdk-tool:latest \
-    bouncycastle-api:latest \
-    jackson2-api:latest \
-    echarts-api:latest \
-    bootstrap5-api:latest \
-    font-awesome-api:latest \
-    jquery3-api:latest \
-    popper2-api:latest
+RUN apt-get update && apt-get install -y lsb-release ca-certificates curl && \
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/debian $(. /etc/os-release && echo \"$VERSION_CODENAME\") stable" \
+    | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+    apt-get update && apt-get install -y docker-ce-cli && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN jenkins-plugin-cli --plugins "blueocean docker-workflow json-path-api"
 
-# Set Jenkins home
-ENV JENKINS_HOME /var/jenkins_home
+USER jenkins
 
 # Expose Jenkins ports
 EXPOSE 8080 50000

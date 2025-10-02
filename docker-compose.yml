@@ -1,6 +1,6 @@
 services: # Define the services/containers for this application
     dind: # Docker-in-Docker service that provides Docker daemon functionality
-        image: docker:dind # Official Docker-in-Docker image
+        image: docker:28.3.3-dind # Official Docker-in-Docker image
         container_name: dind # Set explicit container name instead of auto-generated
         privileged: true # Required for DinD to run Docker daemon inside container
         networks: # Network configuration for this service
@@ -13,6 +13,7 @@ services: # Define the services/containers for this application
         volumes: # Mount volumes for persistent data and certificate sharing
             - docker-certs-ca:/certs/ca # Mount CA certificates volume
             - docker-certs-client:/certs/client # Mount client certificates volume
+            - jenkins-data:/var/jenkins_home # Share Jenkins workspace with DinD
 
     jenkins: # Jenkins CI/CD server service
         build:
@@ -29,7 +30,7 @@ services: # Define the services/containers for this application
             DOCKER_TLS_VERIFY: 1 # Enable TLS verification for Docker connections
             DOCKER_CERT_PATH: /certs/client # Path to Docker TLS certificates
             CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml # Path to JCasC configuration
-            JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true # Skip initial setup wizard
+            JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true -Djava.awt.headless=true # Skip initial setup wizard
             # Pass credential environment variables
             SNYK_API_TOKEN: ${SNYK_API_TOKEN:-dummy-token}
             DOCKER_HUB_USERNAME: ${DOCKER_HUB_USERNAME:-dummy}
