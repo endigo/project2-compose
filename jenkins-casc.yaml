@@ -68,6 +68,40 @@ unclassified:
         url: "http://localhost:8080/"
         adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
 
+    # Audit Trail Configuration
+    audit-trail:
+        pattern: ".*/(?:configure|build|delete|save|create).*"
+        logBuildCause: true
+        logCredentialsUsage: true
+        logScriptUsage: true
+        displayUserName: true
+        loggers:
+            - logFile:
+                log: "/var/jenkins_home/logs/audit.log"
+                limit: 10
+                count: 5
+
+    # Global default build discard configuration
+    buildDiscarders:
+        configuredBuildDiscarders:
+            - "jobBuildDiscarder"
+            - simpleBuildDiscarder:
+                discarder:
+                    logRotator:
+                        daysToKeepStr: "30"
+                        numToKeepStr: "20"
+                        artifactDaysToKeepStr: "14"
+                        artifactNumToKeepStr: "10"
+
+    # Timestamper configuration
+    timestamper:
+        allPipelines: true
+        systemTimeFormat: "yyyy-MM-dd HH:mm:ss"
+
+    # Pipeline Stage View configuration
+    globalDefaultFlowDurabilityLevel:
+        durabilityHint: PERFORMANCE_OPTIMIZED
+
 security:
     # API Token settings
     apiToken:
@@ -82,8 +116,10 @@ jobs:
 
             // Keep only recent builds
             logRotator {
-              numToKeep(10)
-              artifactNumToKeep(5)
+              daysToKeep(30)
+              numToKeep(20)
+              artifactDaysToKeep(14)
+              artifactNumToKeep(10)
             }
 
             // Pipeline definition from repository's Jenkinsfile
