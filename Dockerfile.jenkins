@@ -23,7 +23,10 @@ RUN jenkins-plugin-cli --plugins \
     build-timeout \
     jobConfigHistory \
     pipeline-stage-view \
-    ws-cleanup
+    ws-cleanup \
+    configuration-as-code \
+    matrix-auth \
+    job-dsl
 
 USER jenkins
 
