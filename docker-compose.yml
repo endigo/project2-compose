@@ -30,11 +30,6 @@ services: # Define the services/containers for this application
             DOCKER_TLS_VERIFY: 1 # Enable TLS verification for Docker connections
             DOCKER_CERT_PATH: /certs/client # Path to Docker TLS certificates
             CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml # Path to JCasC configuration
-            JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Dorg.jenkinsci.plugins.durabletask.BourneShellScript.LAUNCH_DIAGNOSTICS=true -Djava.awt.headless=true # Skip initial setup wizard
-            # Pass credential environment variables
-            SNYK_API_TOKEN: ${SNYK_API_TOKEN:-dummy-token}
-            DOCKER_HUB_USERNAME: ${DOCKER_HUB_USERNAME:-dummy}
-            DOCKER_HUB_PASSWORD: ${DOCKER_HUB_PASSWORD:-dummy}
         volumes: # Mount volumes for Jenkins data and Docker integration
             - docker-certs-client:/certs/client:ro # Mount Docker client certificates (read-only)
             - jenkins-data:/var/jenkins_home # Persistent storage for Jenkins configuration and data
