@@ -1,156 +1,271 @@
+# Jenkins Configuration as Code (JCasC) - Automated Jenkins setup
 jenkins:
-    # Authorization: Disable all anonymous access
+    # Authorization strategy defines who can access Jenkins and what they can do
+    # Using globalMatrix to provide fine-grained role-based access control
     authorizationStrategy:
         globalMatrix:
             entries:
-                # Admin user permissions - full control
+                # Admin user - full system access for maintenance and configuration
+                # This account should be used sparingly and secured with strong credentials
                 - user:
-                    name: "${JENKINS_ADMIN_ID:-admin}"
-                    permissions:
-                        - "Overall/Administer"
+                      # Username from environment variable, defaults to 'admin' if not set
+                      name: "${JENKINS_ADMIN_ID:-admin}"
+                      permissions:
+                          # Grant all administrative rights including system configuration
+                          - "Overall/Administer"
 
-                # Pipeline service account permissions - limited to job execution
+                # Pipeline service account - automated pipeline execution with minimal privileges
+                # Follows principle of least privilege for automated processes
                 - user:
-                    name: "${JENKINS_PIPELINE_ID:-pipeline}"
-                    permissions:
-                        - "Overall/Read"
-                        - "Job/Build"
-                        - "Job/Cancel"
-                        - "Job/Read"
-                        - "Job/Workspace"
-                        - "Run/Replay"
-                        - "Run/Update"
-                        - "View/Read"
+                      # Service account username from environment, defaults to 'pipeline'
+                      name: "${JENKINS_PIPELINE_ID:-pipeline}"
+                      permissions:
+                          # Read-only access to Jenkins system information
+                          - "Overall/Read"
+                          # Ability to trigger and execute build jobs
+                          - "Job/Build"
+                          # Ability to cancel running builds (needed for timeout handling)
+                          - "Job/Cancel"
+                          # Read access to job configurations and build history
+                          - "Job/Read"
+                          # Access to job workspace for artifact retrieval
+                          - "Job/Workspace"
+                          # Ability to replay pipeline runs for debugging
+                          - "Run/Replay"
+                          # Update run information (descriptions, build names)
+                          - "Run/Update"
+                          # Read access to Jenkins views and dashboards
+                          - "View/Read"
 
-                # General authenticated users permissions - read-only
+                # Authenticated users group - all logged-in users get read-only access
+                # Allows team members to monitor builds without modification rights
                 - group:
-                    name: "authenticated"
-                    permissions:
-                        - "Overall/Read"
-                        - "Job/Read"
-                        - "View/Read"
-                # Explicitly NO permissions for anonymous users
-                # Anonymous users will be redirected to login
+                      # Special group containing all authenticated users
+                      name: "authenticated"
+                      permissions:
+                          # View Jenkins homepage and system information
+                          - "Overall/Read"
+                          # View job configurations and build history
+                          - "Job/Read"
+                          # Access to custom views and dashboards
+                          - "View/Read"
+                # Anonymous users have no permissions and will be redirected to login
+                # This enforces authentication for all Jenkins access
 
-    # Security Realm: Local user database
+    # Security Realm - manages user authentication
+    # Using local database instead of external LDAP/Active Directory for simplicity
     securityRealm:
         local:
-            allowsSignup: false # Prevent self-registration
+            # Prevent unauthorized users from creating accounts
+            # Only admin can create new users to maintain security control
+            allowsSignup: false
+            # Disable CAPTCHA as we already prevent self-registration
+            # Reduces complexity without sacrificing security
             enableCaptcha: false
+            # Pre-configured user accounts created during Jenkins initialization
             users:
+                # Primary administrator account for system management
                 - id: "${JENKINS_ADMIN_ID:-admin}"
-                  password: "${JENKINS_ADMIN_PASSWORD:-admin}" # Set via environment variable
+                  # Password loaded from environment variable for security
+                  # Never hardcode passwords in configuration files
+                  password: "${JENKINS_ADMIN_PASSWORD}"
                   properties:
+                      # Email configuration for notifications and audit trail
                       - mailer:
-                            emailAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+                            emailAddress: "${JENKINS_ADMIN_EMAIL}"
+                # Service account for automated pipeline operations
+                # Separate from admin to enable auditing and access control
                 - id: "${JENKINS_PIPELINE_ID:-pipeline}"
-                  password: "${JENKINS_PIPELINE_PASSWORD:-pipeline123}" # Service account for pipeline execution
+                  # Unique password from environment, different from admin
+                  password: "${JENKINS_PIPELINE_PASSWORD}"
                   properties:
+                      # Service account email for pipeline notifications
                       - mailer:
-                            emailAddress: "${JENKINS_PIPELINE_EMAIL:-pipeline@example.com}"
+                            emailAddress: "${JENKINS_PIPELINE_EMAIL}"
 
-    # Additional security settings
+    # Remoting security protects agent-to-controller communication
+    # Prevents unauthorized agents from connecting to Jenkins
     remotingSecurity:
+        # Enable protocols that require explicit agent authentication
         enabled: true
 
-    # CSRF Protection
+    # CSRF (Cross-Site Request Forgery) protection
+    # Prevents malicious websites from triggering actions in Jenkins
     crumbIssuer:
         standard:
+            # Include client IP in CSRF token for additional security
+            # Set to false to bind tokens to specific IP addresses
             excludeClientIPFromCrumb: false
 
-    # Disable agent to master access control - replaces CLI setting
+    # Agent communication port for distributed builds
+    # Agents connect to this port to receive build jobs
     slaveAgentPort: 50000
 
+# Unclassified settings - global Jenkins configuration not tied to security
 unclassified:
+    # Jenkins instance location - used in email notifications and API calls
     location:
+        # Base URL for accessing Jenkins UI and API endpoints
+        # Must match the actual URL users access Jenkins from
         url: "http://localhost:8080/"
-        adminAddress: "${JENKINS_ADMIN_EMAIL:-admin@example.com}"
+        # Admin email appears in system notifications and error messages
+        adminAddress: "${JENKINS_ADMIN_EMAIL}"
 
-    # Audit Trail Configuration
+    # Audit Trail - tracks all significant actions for security compliance
+    # Essential for forensics, compliance, and understanding system changes
     audit-trail:
+        # Regex pattern matching URLs of auditable actions
+        # Captures configure, build, delete, save, and create operations
         pattern: ".*/(?:configure|build|delete|save|create).*"
+        # Log what triggered each build (SCM change, user action, timer, etc.)
         logBuildCause: true
+        # Track when credentials are accessed (critical for security auditing)
         logCredentialsUsage: true
+        # Log script execution to detect unauthorized or malicious code
         logScriptUsage: true
+        # Show username instead of user ID for better readability
         displayUserName: true
+        # Output configuration for audit logs
         loggers:
             - logFile:
-                log: "/var/jenkins_home/logs/audit.log"
-                limit: 10
-                count: 5
+                  # Audit log file location within Jenkins home directory
+                  log: "/var/jenkins_home/logs/audit.log"
+                  # Maximum log file size in MB before rotation
+                  limit: 10
+                  # Number of rotated log files to retain
+                  count: 5
 
-    # Global default build discard configuration
+    # Build retention policy - prevents disk space exhaustion
+    # Automatically removes old builds while preserving recent history
     buildDiscarders:
         configuredBuildDiscarders:
+            # Use job-specific discarder if configured
             - "jobBuildDiscarder"
+            # Global fallback discard policy for all jobs
             - simpleBuildDiscarder:
-                discarder:
-                    logRotator:
-                        daysToKeepStr: "30"
-                        numToKeepStr: "20"
-                        artifactDaysToKeepStr: "14"
-                        artifactNumToKeepStr: "10"
+                  discarder:
+                      logRotator:
+                          # Delete builds older than 30 days
+                          daysToKeepStr: "30"
+                          # Keep maximum 20 most recent builds regardless of age
+                          numToKeepStr: "20"
+                          # Delete artifacts older than 14 days (smaller retention)
+                          artifactDaysToKeepStr: "14"
+                          # Keep maximum 10 builds with artifacts
+                          artifactNumToKeepStr: "10"
 
-    # Timestamper configuration
+    # Timestamper plugin configuration - adds timestamps to console output
+    # Critical for debugging timing issues and understanding build duration
     timestamper:
+        # Enable timestamps for all pipeline jobs automatically
         allPipelines: true
+        # Timestamp format for console output
         systemTimeFormat: "yyyy-MM-dd HH:mm:ss"
 
-    # Pipeline Stage View configuration
+    # Pipeline durability controls how pipeline state is persisted
+    # Trade-off between reliability and performance
     globalDefaultFlowDurabilityLevel:
+        # PERFORMANCE_OPTIMIZED reduces I/O for faster pipeline execution
+        # Acceptable risk for CI/CD where pipelines can be re-run if needed
         durabilityHint: PERFORMANCE_OPTIMIZED
 
+# Security configuration - additional security hardening
 security:
-    # API Token settings
+    # API Token settings - controls how programmatic access tokens are managed
     apiToken:
+        # Disable legacy API tokens which have weaker security properties
+        # Legacy tokens never expire and lack fine-grained permissions
         creationOfLegacyTokenEnabled: false
+        # Prevent automatic token creation on user creation
+        # Users must explicitly request tokens when needed
         tokenGenerationOnCreationEnabled: false
+        # Enable anonymous usage statistics for token usage patterns
+        # Helps Jenkins project improve security features
         usageStatisticsEnabled: true
 
+# Jobs configuration - automatically creates pipeline jobs on Jenkins startup
 jobs:
+    # Groovy DSL script to define pipeline job
+    # Executes during Jenkins initialization to create job configuration
     - script: >
           pipelineJob('21979741_Project2_pipeline') {
+            // Human-readable description shown in Jenkins UI
             description('Pipeline for AWS Elastic Beanstalk Express.js Sample Application')
 
-            // Keep only recent builds
+            // Build retention policy specific to this job
+            // Overrides global settings if needed
             logRotator {
+              // Remove builds older than 30 days to manage disk space
               daysToKeep(30)
+              // Keep maximum 20 builds regardless of age
               numToKeep(20)
+              // Artifacts consume more space - shorter retention period
               artifactDaysToKeep(14)
+              // Keep maximum 10 builds with archived artifacts
               artifactNumToKeep(10)
             }
 
-            // Pipeline definition from repository's Jenkinsfile
+            // Pipeline definition - specifies where to find pipeline code
             definition {
+              // CPS (Continuous Pipeline Script) from SCM (Source Control Management)
+              // Pipeline code lives in repository, not in Jenkins configuration
               cpsScm {
+                // Source control system configuration
                 scm {
+                  // Using Git as version control system
                   git {
+                    // Remote repository configuration
                     remote {
+                      // GitHub repository URL containing application and Jenkinsfile
                       url('https://github.com/endigo/aws-elastic-beanstalk-express-js-sample.git')
                     }
+                    // Branch pattern to monitor (wildcard matches all main branches)
                     branch('*/main')
                   }
                 }
-                scriptPath('Jenkinsfile')  // Use the existing Jenkinsfile from the repo
+                // Path to Jenkinsfile within the repository
+                // Jenkins will execute this file to run the pipeline
+                scriptPath('Jenkinsfile')
+                // Lightweight checkout disabled to ensure full repository clone
+                // Required for Docker builds and full source code access
                 lightweight(false)
               }
             }
           }
 
+# Credentials configuration - securely stores sensitive data for pipeline use
+# All secrets loaded from environment variables to avoid hardcoding
 credentials:
+    # System-level credentials accessible by Jenkins and all jobs
     system:
+        # Domain credentials allow grouping credentials by scope/purpose
         domainCredentials:
+            # Global domain - credentials available to all jobs and agents
             - credentials:
-                  # Snyk API token for security scanning
+                  # Snyk API token - string credential type for API keys
+                  # Used by pipeline to authenticate with Snyk security scanning service
                   - string:
+                        # GLOBAL scope makes credential available everywhere in Jenkins
                         scope: GLOBAL
+                        # Unique identifier referenced in Jenkinsfile
+                        # Must match credential ID used in pipeline code
                         id: "snyk-api-token"
-                        secret: "${SNYK_API_TOKEN:-dummy-token}"
+                        # Actual secret value from environment variable
+                        # Never commit actual token values to version control
+                        secret: "${SNYK_API_TOKEN}"
+                        # Human-readable description for credential management UI
                         description: "Snyk API token for security scanning"
-                  # Docker Hub credentials
+                  # Docker Hub credentials - username/password type for registry authentication
+                  # Required to push Docker images to Docker Hub repository
                   - usernamePassword:
+                        # Available globally for all pipeline jobs
                         scope: GLOBAL
+                        # Unique identifier referenced in Jenkinsfile docker.withRegistry()
                         id: "docker-hub-credentials"
-                        username: "${DOCKER_HUB_USERNAME:-dummy}"
-                        password: "${DOCKER_HUB_PASSWORD:-dummy}"
+                        # Docker Hub username from environment variable
+                        username: "${DOCKER_HUB_USERNAME}"
+                        # Docker Hub password or access token from environment variable
+                        # Using access token instead of password is recommended
+                        password: "${DOCKER_HUB_PASSWORD}"
+                        # Description for credential inventory and auditing
                         description: "Docker Hub credentials"

@@ -1,5 +1,0 @@
-FROM oven/bun:1-alpine
-
-RUN apk add --no-cache curl docker-cli
-RUN curl -fsSL https://static.snyk.io/cli/latest/snyk-alpine -o /usr/local/bin/snyk && \
-    chmod +x /usr/local/bin/snyk
